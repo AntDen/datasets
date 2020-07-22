@@ -1,0 +1,44 @@
+#!/bin/bash
+ 
+function check_dataset_info(){
+    if [[ -z "${DataSetsCli_name}" ]]; then
+	echo "DataSetsCli_name is undefined"
+	exit
+     else
+	MY_DATASET_NAME="${DataSetsCli_name}"
+     fi
+}
+
+function check_mount_point(){
+    if test -f "$MOUNT_POINT"; then
+	echo "MOUNT_POINT exists"
+    else
+	mkdir $MOUNT_POINT
+    fi
+}
+
+BATFS_BIN=/opt/mydan/dan/antden/code/datasets/data-o/batfs
+function check_batfs(){
+    if test -f "$BATFS_BIN"; then
+        echo "find $BATFS_BIN"
+    else
+	echo "$BATFS_BIN is not exists"
+    fi
+}
+check_dataset_info
+MOUNT_POINT="/mnt/$MY_DATASET_NAME"
+
+while (( "$#" )) ; do
+   case $1 in
+     --mount)
+	   check_mount_point
+	   check_batfs
+	   $BATFS_BIN -o allow_other  --type-cache-ttl=60m  --stat-cache-ttl=60m --endpoint=http://abc-storage.ainirobot.net:8080 --cheap $MY_DATASET_NAME /mnt/$DataSetsCli_name
+	   exit 1
+	   ;;
+      --umount)
+	   umount /mnt/$MOUNT_POINT
+	   exit 2
+   esac
+   shift
+done

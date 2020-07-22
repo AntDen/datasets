@@ -1,0 +1,45 @@
+#!/opt/mydan/perl/bin/perl
+use strict;
+use warnings;
+
+use JSON;
+use LWP::UserAgent;
+use FindBin qw( $RealBin );
+use MYDan::Util::OptConf;
+use Data::Dumper;
+
+=head1 SYNOPSIS
+
+ $0 [--name abc] [--user foo@abc.com] [--group foo]
+
+=cut
+
+my $option = MYDan::Util::OptConf->load();
+my %o = $option->get(qw( name=s user=s group=s ))->dump();
+
+$option->assert( qw( name user group ) );
+
+my @x = `DataSetsCli_name=$o{name} /opt/AntDen/antdencli/code/datasets/data-o/master md`;
+chomp @x;
+
+$o{type} = 'data-o';
+
+map{
+    $o{$1} = $2 if $_ =~ /^DataSetsCli_([a-z]+)=(.+)$/
+}@x;
+
+curl( '/api/datasets/create', %o );
+curl( '/api/datasets/addauth', %o );
+
+sub curl
+{
+    my ( $uri, %p ) = @_;
+    my $ua = LWP::UserAgent->new();
+    $ua->agent('Mozilla/9 [en] (Centos; Linux)');
+    $ua->timeout( 10 );
+    my $res = $ua->post( "http://127.0.0.1:3000$uri", 
+        Content => JSON::to_json(\%p), 'Content-Type' => 'application/json' );
+    my $cont = $res->content;
+    print Dumper $cont;
+
+}

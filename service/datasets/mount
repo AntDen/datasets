@@ -1,0 +1,50 @@
+#!/opt/mydan/perl/bin/perl
+use strict;
+use warnings;
+
+use MYDan::Util::OptConf;
+use FindBin qw( $RealBin );
+
+=head1 SYNOPSIS
+
+ $0 [--daemon]
+    [--interval number]
+
+=cut
+
+my $option = MYDan::Util::OptConf->load();
+my %o = $option->set( interval => 15 )
+    ->get(qw( daemon interval=i ))->dump();
+
+if( $o{daemon} )
+{
+    system "killall AntDen_datasets_automount 2>/dev/null";
+    open(STDOUT, '>>/var/log/ntpsync.log') || die "STDOUT ERROR $!";
+    open(STDERR, '>>/var/log/ntpsync.log') || die "STDERR ERROR $!";
+    exit 0 if fork;
+}
+
+$0 = 'AntDen_datasets_automount';
+
+sub getConfig
+{
+    my $config = eval{ YAML::XS::LoadFile '/opt/AntDen/slave/conf/datasets.conf' };
+    return $config unless $@;
+    warn "load dataset.conf fail:$@\n";
+    return [];
+}
+
+while( 1 )
+{
+    my $config = getConfig();
+
+    for( @$config )
+    {
+        my $name = $_->{name};
+        print "check dataset: $name\n";
+        next if -d "/mnt/$name";
+        print "mount dataset: $name\n";
+        system "$RealBin/../../tools/datasets/slave '$name' --mount";
+    }
+    sleep $o{interval};
+}
