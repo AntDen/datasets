@@ -28,6 +28,8 @@ map{
     $o{$1} = $2 if $_ =~ /^DataSetsCli_([a-z]+)=(.+)$/
 }@x;
 
+print Dumper \@x unless $o{token};
+
 curl( '/api/datasets/create', %o );
 curl( '/api/datasets/addauth', %o );
 
